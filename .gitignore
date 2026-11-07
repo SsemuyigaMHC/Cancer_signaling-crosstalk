@@ -1,0 +1,9 @@
+__pycache__/
+*.pyc
+.env
+outputs/
+data/private/
+data/full_text/
+*.pdf
+*.docx
+.DS_Store
