@@ -1,0 +1,2 @@
+# Default cited-reference workflow uses the Python standard library only.
+# No third-party dependencies are needed for run.py test/status/citations.

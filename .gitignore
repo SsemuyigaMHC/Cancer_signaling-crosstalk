@@ -7,3 +7,10 @@ data/full_text/
 *.pdf
 *.docx
 .DS_Store
+
+.venv/
+venv/
+*.xlsx
+*.xls
+*.log
+.DS_Store

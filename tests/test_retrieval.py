@@ -24,6 +24,18 @@ class TestExactRetrieval(unittest.TestCase):
     def test_normalization(self):
         self.assertEqual(normalize_doi('https://doi.org/10.1234/test.1'),'10.1234/test.1')
         with self.assertRaises(ValueError):normalize_doi('not-a-doi')
+        with self.assertRaises(ValueError):normalize_doi('10.1200/ABC;PAGEGROUP:STRING:PUBLICATION')
+    def test_malformed_doi_is_queued_not_crash(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            inp=Path(tmp)/'seed.csv';out=Path(tmp)/'out.csv'
+            with inp.open('w',newline='') as f:
+                w=csv.DictWriter(f,fieldnames=['first_author','year','doi']);w.writeheader()
+                w.writerow({'first_author':'Bad','year':'2024','doi':'10.1200/ABC;PAGEGROUP:STRING:PUBLICATION'})
+                w.writerow({'first_author':'Good','year':'2024','doi':'10.1234/test.1'})
+            data=process(inp,out,live=False)
+            self.assertEqual(data[0]['lookup_status'],'MALFORMED_DOI_MANUAL_REVIEW')
+            self.assertEqual(data[1]['lookup_status'],'EXACT_DOI_READY_DRY_RUN')
+
     def test_live_mock_exact_only(self):
         r=exact_lookup('10.1234/test.1',opener=fake_open)
         self.assertEqual(r['title'],'Verified cancer study')

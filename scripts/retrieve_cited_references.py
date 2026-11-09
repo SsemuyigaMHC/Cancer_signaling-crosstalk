@@ -21,7 +21,7 @@ DEFAULT_INPUT=ROOT/'data'/'chapter40_citation_inventory.csv'
 def normalize_doi(value: str)->str:
     v=value.strip()
     v=re.sub(r'^https?://(?:dx\.)?doi\.org/', '', v, flags=re.I)
-    if v and not v.lower().startswith('10.'):
+    if v and (not re.fullmatch(r'10\.\d{4,9}/[^\s;]+', v, flags=re.I) or any(c in v for c in '<>')):
         raise ValueError(f'Invalid DOI: {value}')
     return v
 
@@ -61,8 +61,15 @@ def process(input_file:Path, output_file:Path, live:bool=False,limit:int=0,delay
     out=[]
     for r in rows:
         item={**r,'lookup_status':'DOI_NOT_VERIFIED','retrieved_title':'','retrieved_journal':'','retrieved_year':'','open_access_record':''}
-        doi=normalize_doi(r.get('doi',''))
-        if not doi:item['lookup_status']='DOI_MISSING_MANUAL_REVIEW'
+        raw_doi=r.get('doi','')
+        try:
+            doi=normalize_doi(raw_doi)
+        except ValueError:
+            doi=''
+            item['lookup_status']='MALFORMED_DOI_MANUAL_REVIEW'
+        if item['lookup_status']=='MALFORMED_DOI_MANUAL_REVIEW':
+            pass
+        elif not doi:item['lookup_status']='DOI_MISSING_MANUAL_REVIEW'
         elif not live:item['lookup_status']='EXACT_DOI_READY_DRY_RUN'
         else:
             try:
@@ -89,7 +96,8 @@ def main():
     a=p.parse_args()
     if a.limit<0 or a.delay<0:p.error('limit and delay must be nonnegative')
     result=process(a.input,a.output,a.live,a.limit,a.delay)
-    print('Records:',len(result),'| with DOI:',sum(bool(x.get('doi')) for x in result),'| saved:',a.output)
+    from collections import Counter
+    print('Records:',len(result),'| statuses:',dict(Counter(x['lookup_status'] for x in result)),'| saved:',a.output)
     print('No copyrighted PDFs downloaded. Missing DOIs are left for human verification.')
 
 if __name__=='__main__':main()
